@@ -5,29 +5,52 @@ project (tinyCCWrapper CXX)
 ExternalProject_Add(TINYCC
     DOWNLOAD_COMMAND ""
     SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/tinycc
-    CONFIGURE_COMMAND cd ${CMAKE_CURRENT_LIST_DIR}/tinycc && ./configure --debug --enable-static --with-libgcc --with-selinux
+    CONFIGURE_COMMAND cd ${CMAKE_CURRENT_LIST_DIR}/tinycc && ./configure --debug --enable-static --with-selinux
     BUILD_COMMAND cd ${CMAKE_CURRENT_LIST_DIR}/tinycc && make
     BUILD_BYPRODUCTS ${CMAKE_CURRENT_LIST_DIR}/tinycc/libtcc.a
     INSTALL_COMMAND ""
     TEST_COMMAND ""
 )
 
+ExternalProject_Add(LIBMUSL
+    DOWNLOAD_COMMAND ""
+    SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/musl
+    CONFIGURE_COMMAND cd ${CMAKE_CURRENT_LIST_DIR}/musl && ./configure --enable-debug
+    BUILD_COMMAND cd ${CMAKE_CURRENT_LIST_DIR}/musl && make
+    BUILD_BYPRODUCTS ${CMAKE_CURRENT_LIST_DIR}/musl/lib/libc.a
+    INSTALL_COMMAND ""
+    TEST_COMMAND ""
+)
 
-include(${CMAKE_CURRENT_LIST_DIR}/includeable.cmake)
-make_includeable(${CMAKE_CURRENT_LIST_DIR}/tinycc/libtcc.h ${CMAKE_CURRENT_BINARY_DIR}/tinycc/libtcc.h.hpp)
-make_binary_includeable(${CMAKE_CURRENT_LIST_DIR}/tinycc/libtcc1.a ${CMAKE_CURRENT_BINARY_DIR}/tinycc/libtcc1.a.hpp)
+function(romfs_copy_files TO output_directory FILES input_files RELATIVE relative_dir)
+    foreach(file ${input_files})
+        cmake_path(RELATIVE_PATH file BASE_DIRECTORY ${relative_dir} OUTPUT_VARIABLE fileRel)
+        # set(fileRel "${output_directory}/${fileRel}")
+        cmake_path(ABSOLUTE_PATH fileRel BASE_DIRECTORY ${output_directory} NORMALIZE OUTPUT_VARIABLE fileTo)
+        if(NOT EXISTS "${fileTo}")
+            configure_file(${file} "${fileTo}")
+            message("[copying] ${file} -> ${fileTo}")
+        endif()
+    endforeach()
+endfunction()
+
+# Package nessicary libraries into the binary
+file(GLOB_RECURSE MUSL_HEADERS "${CMAKE_CURRENT_LIST_DIR}/musl/include/*" LIST_DIRECTORIES false)
+romfs_copy_files(TO ${CMAKE_CURRENT_LIST_DIR}/romfs/musl FILES "${MUSL_HEADERS}" RELATIVE ${CMAKE_CURRENT_LIST_DIR}/musl)
+file(GLOB_RECURSE MUSL_PLATFORM_HEADERS "${CMAKE_CURRENT_LIST_DIR}/musl/arch/x86_64/*" LIST_DIRECTORIES false) # TODO: it would be preferable if we dynamically picked the platform instead of assumign x86_64!
+romfs_copy_files(TO ${CMAKE_CURRENT_LIST_DIR}/romfs/musl/include FILES "${MUSL_PLATFORM_HEADERS}" RELATIVE ${CMAKE_CURRENT_LIST_DIR}/musl/arch/x86_64/)
+file(GLOB_RECURSE MUSL_GENERATED_HEADERS "${CMAKE_CURRENT_LIST_DIR}/musl/obj/include/*" LIST_DIRECTORIES false)
+romfs_copy_files(TO ${CMAKE_CURRENT_LIST_DIR}/romfs/musl/include FILES "${MUSL_GENERATED_HEADERS}" RELATIVE ${CMAKE_CURRENT_LIST_DIR}/musl/obj/include/)
+configure_file(${CMAKE_CURRENT_LIST_DIR}/tinycc/libtcc.h ${CMAKE_CURRENT_LIST_DIR}/romfs/libtcc.h COPYONLY)
+configure_file(${CMAKE_CURRENT_LIST_DIR}/tinycc/libtcc1.a ${CMAKE_CURRENT_LIST_DIR}/romfs/libtcc1.a COPYONLY)
+configure_file(${CMAKE_CURRENT_LIST_DIR}/musl/lib/libc.a ${CMAKE_CURRENT_LIST_DIR}/romfs/musl_libc.a COPYONLY)
+set(LIBROMFS_PROJECT_NAME ${PROJECT_NAME})
+set(LIBROMFS_RESOURCE_LOCATION "${CMAKE_CURRENT_LIST_DIR}/romfs")
+add_subdirectory(libromfs)
+
 
 # Wrapper library to make it all work :D
-add_library(${PROJECT_NAME} STATIC empty.cpp ${CMAKE_CURRENT_BINARY_DIR}/tinycc/libtcc.h.hpp ${CMAKE_CURRENT_BINARY_DIR}/tinycc/libtcc1.a.hpp)
-add_dependencies(${PROJECT_NAME} TINYCC)
-target_link_libraries(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_LIST_DIR}/tinycc/libtcc.a)
+add_library(${PROJECT_NAME} STATIC empty.cpp)
+add_dependencies(${PROJECT_NAME} TINYCC LIBMUSL)
+target_link_libraries(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_LIST_DIR}/tinycc/libtcc.a ${LIBROMFS_LIBRARY})
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_LIST_DIR}/tinycc ${CMAKE_CURRENT_BINARY_DIR})
-target_compile_definitions(${PROJECT_NAME} PUBLIC TCC_LIBRARY_PATH=\"${CMAKE_CURRENT_LIST_DIR}/tinycc\")
-
-# function(target_setup_tcc_paths TARGET)
-# target_compile_definitions(TARGET PU
-#   <INTERFACE|PUBLIC|PRIVATE> [items1...]
-#   [<INTERFACE|PUBLIC|PRIVATE> [items2...] ...])
-# endfunction()
-
-

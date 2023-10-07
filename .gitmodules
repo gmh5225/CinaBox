@@ -1,3 +1,9 @@
 [submodule "libs/tinycc"]
 	path = libs/tinycc
 	url = https://repo.or.cz/tinycc.git
+[submodule "libs/musl"]
+	path = libs/musl
+	url = https://git.musl-libc.org/git/musl
+[submodule "libs/libromfs"]
+	path = libs/libromfs
+	url = https://github.com/WerWolv/libromfs

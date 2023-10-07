@@ -3,7 +3,7 @@
 #include "stdio.h"
 #include "empty.cpp"
 
-bool stop_requested(struct stop_token* stop);
+bool stop_token_stop_requested(struct stop_token* stop);
 
 
 
@@ -18,7 +18,7 @@ void start(void) {
 void go(struct stop_token* stop) {
     printf("gone\n");
 
-    while(!stop_requested(stop)) {
+    while(!stop_token_stop_requested(stop)) {
         // printf("in thread\n");
     }
 }

@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.20)
 project (CPluginLoader CXX C)
 
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_POSITION_INDEPENDENT_CODE true)
 
 add_subdirectory(libs)
 

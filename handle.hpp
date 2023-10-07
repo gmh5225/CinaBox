@@ -11,7 +11,7 @@
 
 #include "../../plugin_handle.hpp"
 
-#include "libs/includeable.hpp"
+#include "libs/romfs_materialize.hpp"
 
 bool stop_requested(std::stop_token* stop) { return stop->stop_requested(); }
 bool stop_possible(std::stop_token* stop) { return stop->stop_possible(); }
@@ -36,6 +36,8 @@ namespace pluginsplusplus {
 	struct CPluginHandle: public PluginHandleBase<PluginBase> {
         static std::filesystem::path header;
         static std::filesystem::path archive;
+        static std::filesystem::path libc;
+        static std::filesystem::path libc_include;
 
         bool started = false;
 		TCCState* state = nullptr;
@@ -64,15 +66,26 @@ namespace pluginsplusplus {
         static CPluginHandle load_memory(std::string source) {
             CPluginHandle out;
             out.state = tcc_new();
+            // Link to/include libtcc1
             tcc_set_lib_path(out.state, archive.parent_path().c_str());
             tcc_add_include_path(out.state, header.parent_path().c_str());
-            // TODO: Need to also provide paths to the system's c standard library!
+            // Link to/include musllibc
+            tcc_add_library(out.state, libc.filename().c_str());
+            tcc_add_include_path(out.state, libc_include.c_str());
+            // Allow app developers to customize the settings!
             register_custom_c_options(out.state);
+            // Allow the file to customize its settings
+            if(source.starts_with("#!")){
+                std::string first = std::string(source.begin() + 2, source.begin()+ source.find("\n"));
+                tcc_set_options(out.state, first.c_str());
+            }
             tcc_set_output_type(out.state, TCC_OUTPUT_MEMORY);
             tcc_compile_string(out.state, source.c_str());
 
-            tcc_add_symbol(out.state, "stop_requested", (const void*)stop_requested);
-            tcc_add_symbol(out.state, "stop_possible", (const void*)stop_possible);
+            // Register pluginsplusplus functions!
+            tcc_add_symbol(out.state, "stop_token_stop_requested", (const void*)stop_requested);
+            tcc_add_symbol(out.state, "stop_token_stop_possible", (const void*)stop_possible);
+            // Allow developers to inject symbol loads!
             register_custom_c_symbols(out.state);
 
             out.memory = malloc(tcc_relocate(out.state, nullptr));
@@ -143,5 +156,9 @@ namespace pluginsplusplus {
     std::filesystem::path CPluginHandle<PluginBase>::header;
     template<std::derived_from<plugin_base> PluginBase>
     std::filesystem::path CPluginHandle<PluginBase>::archive;
+    template<std::derived_from<plugin_base> PluginBase>
+    std::filesystem::path CPluginHandle<PluginBase>::libc;
+    template<std::derived_from<plugin_base> PluginBase>
+    std::filesystem::path CPluginHandle<PluginBase>::libc_include;
 
 }
