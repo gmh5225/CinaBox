@@ -5,7 +5,7 @@ project (tinyCCWrapper CXX)
 ExternalProject_Add(TINYCC
     DOWNLOAD_COMMAND ""
     SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/tinycc
-    CONFIGURE_COMMAND cd ${CMAKE_CURRENT_LIST_DIR}/tinycc && ./configure --debug --enable-static --with-selinux --extra-cflags="-fPIC"
+    CONFIGURE_COMMAND cd ${CMAKE_CURRENT_LIST_DIR}/tinycc && ./configure --debug --enable-static --with-selinux --extra-cflags="-fPIC" --extra-ldflags="-fPIC"
     BUILD_COMMAND cd ${CMAKE_CURRENT_LIST_DIR}/tinycc && make
     BUILD_BYPRODUCTS ${CMAKE_CURRENT_LIST_DIR}/tinycc/libtcc.a ${CMAKE_CURRENT_LIST_DIR}/tinycc/libtcc1.a ${CMAKE_CURRENT_LIST_DIR}/tinycc/libtcc.h 
     INSTALL_COMMAND ""
