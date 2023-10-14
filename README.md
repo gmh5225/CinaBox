@@ -70,11 +70,11 @@ The full build process is a tiny bit more complicated than usual:
 
 ```bash
     mkdir build && cd build
-    cmake .. # -G Ninja works fine
+    cmake .. -DFIRST_BUILD=true # -G Ninja works fine
     make # Or Ninja, however TCC and MUSL will be built using make
 
     # The first time you build the project, some of the header files which need to be copied into the binary may not be created yet
     rm -rf ../libs/romfs # Everything in this folder is copied into the binary
-    cmake ..
+    cmake .. -DFIRST_BUILD=false
     make # Second time around everything should be good to go!
 ```
