@@ -1,7 +1,6 @@
 #ifndef __831f9716044f51c53a9863450669a023_ROMFS_MATERIALIZE__
 #define __831f9716044f51c53a9863450669a023_ROMFS_MATERIALIZE__
 
-
 #include <romfs/romfs.hpp>
 #include <filesystem>
 #include <random>
@@ -12,8 +11,12 @@ namespace romfs {
 	struct tempary_filesystem {
 		std::filesystem::path base = std::filesystem::temp_directory_path() / "libromfs_materialized";
 
+		std::filesystem::path append_to_base_path(std::string_view s) {
+			return base = std::filesystem::temp_directory_path() / s;
+		}
+
 		std::filesystem::path randomize_base_path() {
-			return base = std::filesystem::temp_directory_path() / []{ return std::to_string(std::random_device{}()); }();
+			return append_to_base_path(std::to_string(std::random_device{}()));
 		}
 
 		std::filesystem::path materialize_file(std::filesystem::path path) {
